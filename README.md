@@ -71,6 +71,8 @@ You should hear the assistant speak real events fetched through Scalekit for the
 
 **See the full flow in action**: [Watch the demo recording](https://screen.studio/share/tFpYlmgB)
 
+> **Progress tracking**: See `PROGRESS.md` in this repo for up-to-date status, doc references (Scalekit + Vapi llms.txt), implementation validation, gaps, and the MCP evolution path. This file is maintained by scheduled background tracking.
+
 ### Why these steps matter
 
 - The exact tool name `googlecalendar_list_events` + proper attachment is required for Vapi to actually invoke your webhook.
