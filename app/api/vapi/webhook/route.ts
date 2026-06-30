@@ -30,6 +30,11 @@ export async function POST(req: NextRequest) {
       // Map the name Vapi sent to the canonical Scalekit tool name for the connector.
       // Best practice: create the Vapi Function tool with name "googlecalendar_list_events"
       // so this mapping becomes a no-op. The fallback keeps the demo resilient during development.
+      //
+      // Scalekit executeTool (per current AgentKit docs): primarily { toolName, identifier, toolInput }.
+      // toolName includes the connector prefix (e.g. "googlecalendar_list_events").
+      // `connector` here provides explicit grouping (accepted in this SDK version for the bridge pattern).
+      // Result often surfaces data under `.data`; we normalize for Vapi.
       console.log(`[Vapi Webhook] Executing Scalekit tool: ${toolName} for identifier: ${identifier}`);
 
       try {

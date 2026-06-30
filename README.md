@@ -91,7 +91,7 @@ Two hard problems appear immediately:
 
 Scalekit AgentKit solves the first problem by providing:
 - OAuth connection management per user (`identifier`)
-- A clean `executeTool({ toolName, toolInput, identifier, connector })` surface
+- A clean `executeTool({ toolName, toolInput, identifier, connector? })` surface (toolName often carries connector prefix e.g. `googlecalendar_*`; see webhook for current bridge usage)
 - Optional Virtual MCP servers for dynamic discovery
 
 Vapi solves the voice part and supports two tool mechanisms:

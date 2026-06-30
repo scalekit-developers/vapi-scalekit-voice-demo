@@ -67,6 +67,8 @@ export default function VapiScalekitDemo() {
 
     // IMPORTANT: Pass assistantId as FIRST argument (string), not inside the object.
     // Passing { assistantId } causes "assistant.property assistantId should not exist"
+    // The metadata object is forwarded by Vapi into tool-calls messages (see webhook).
+    // (Future: static `parameters` on the Vapi tool def can inject trusted values server-side, bypassing LLM.)
     vapi.start(assistantId, {
       metadata,
     });

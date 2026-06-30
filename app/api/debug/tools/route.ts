@@ -11,7 +11,10 @@ export async function GET() {
   try {
     const identifier = process.env.TEST_IDENTIFIER || process.env.NEXT_PUBLIC_TEST_SCALEKIT_CONNECTION_ID || 'praneshtaker@gmail.com';
     
-    // List scoped tools for this identifier - shows exactly what tools are available
+    // List scoped tools for this identifier using Scalekit.tools.listScopedTools (AgentKit).
+    // Docs examples: scalekit.tools.listScopedTools(identifier, { filter?, pageSize? }) => { tools }
+    // Current call uses single-arg form (SDK may return tuple or array-wrapped); defensive extraction.
+    // Use the returned tools (with input_schema, description) to configure exact Vapi Function tool params.
     const [response] = await scalekit.tools.listScopedTools(identifier);
     const tools = response.tools || response || [];
     
