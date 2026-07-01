@@ -40,7 +40,7 @@ Copy the `https://...ngrok-free.dev` URL.
 
 ### Configure the two dashboards
 
-**Vapi dashboard**
+**Vapi dashboard** (https://dashboard.vapi.ai)
 - Create (or reuse) an Assistant.
 - Create a **Function** tool with these **exact** values:
   - **Name**: `googlecalendar_list_events` (must match the Scalekit tool)
@@ -63,11 +63,14 @@ Restart `npm run dev` after editing `.env.local` so the public env vars are pick
 
 Open http://localhost:3000.
 
-Click **Start Voice Call** and say:
+Click **Start Voice Call** and try natural phrases such as:
 
-> "List my calendar events this week."
+- "List my calendar events this week"
+- "Find emails from Acme about the renewal"
+- "Summarize recent messages in the #product Slack channel"
+- "Show my open GitHub pull requests"
 
-You should hear the assistant speak real events fetched through Scalekit for the connected user.
+You should hear the assistant speak real data fetched through Scalekit for the connected user. (The exact tools available depend on what you've mapped in your Virtual MCP config and authorized for the test identifier.)
 
 **See the full flow in action**: [Watch the demo recording](https://screen.studio/share/tFpYlmgB)
 
@@ -207,6 +210,11 @@ NEXT_PUBLIC_VAPI_ASSISTANT_ID=...       # the assistant you will configure below
 - `TEST_IDENTIFIER` is read server-side in the webhook (safe).
 - `NEXT_PUBLIC_*` is read in the browser so the UI can put it into the `metadata` object sent to Vapi.
 - In a real product you would derive both from your authenticated user's session (e.g. after they log in with Scalekit or your own auth and then connect their Google account).
+
+**Demo vs live runtime injection**
+See `.env.example` header comments and the cookbook for full details. In production:
+- Identifier comes from the real user session.
+- Tokens + MCP `server` config (url + `Authorization` header) are minted and injected programmatically via your backend + Vapi APIs. No manual per-call dashboard edits.
 
 ### 3. Understand the two moving pieces you will configure
 
