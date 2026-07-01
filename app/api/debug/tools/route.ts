@@ -1,38 +1,119 @@
 import { NextResponse } from 'next/server';
 import { ScalekitClient } from '@scalekit-sdk/node';
 
-const scalekit = new ScalekitClient(
-  process.env.SCALEKIT_ENV_URL!,
-  process.env.SCALEKIT_CLIENT_ID!,
-  process.env.SCALEKIT_CLIENT_SECRET!
-);
+let scalekitClient: ScalekitClient | null = null;
+
+function getScalekit() {
+  if (!scalekitClient) {
+    const envUrl = process.env.SCALEKIT_ENV_URL;
+    const clientId = process.env.SCALEKIT_CLIENT_ID;
+    const clientSecret = process.env.SCALEKIT_CLIENT_SECRET;
+
+    if (!envUrl || !clientId || !clientSecret) {
+      throw new Error(
+        'Missing SCALEKIT_ENV_URL, SCALEKIT_CLIENT_ID or SCALEKIT_CLIENT_SECRET. ' +
+          'Set them in .env.local (server-side only).'
+      );
+    }
+    scalekitClient = new ScalekitClient(envUrl, clientId, clientSecret);
+  }
+  return scalekitClient;
+}
 
 export async function GET() {
+  const identifier =
+    process.env.TEST_IDENTIFIER ||
+    process.env.NEXT_PUBLIC_TEST_SCALEKIT_CONNECTION_ID ||
+    'demo';
+
   try {
-    const identifier = process.env.TEST_IDENTIFIER || process.env.NEXT_PUBLIC_TEST_SCALEKIT_CONNECTION_ID || 'praneshtaker@gmail.com';
-    
-    // List scoped tools for this identifier using Scalekit.tools.listScopedTools (AgentKit).
-    // Docs examples: scalekit.tools.listScopedTools(identifier, { filter?, pageSize? }) => { tools }
-    // Current call uses single-arg form (SDK may return tuple or array-wrapped); defensive extraction.
-    // Use the returned tools (with input_schema, description) to configure exact Vapi Function tool params.
-    const [response] = await scalekit.tools.listScopedTools(identifier);
-    const tools = response.tools || response || [];
-    
+    let scopedTools: unknown[] = [];
+    let source = 'none';
+
+    const scalekit = getScalekit();
+
+    // listScopedTools is the right call for tools already available to this identifier.
+    // It requires a filter (providers/toolNames/connectionNames).
+    // We pass a plain object; the SDK internally creates the protobuf message.
+    try {
+      const filter = {
+        providers: [],
+        toolNames: [],
+        connectionNames: [],
+      };
+      // Cast to satisfy the strict MessageInitShape while keeping the file free of internal pb imports
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const res = await scalekit.tools.listScopedTools(identifier, { filter } as any);
+      scopedTools = (res as { tools?: unknown[] }).tools ?? [];
+      source = 'listScopedTools';
+    } catch (scopedErr) {
+      console.warn('[debug/tools] listScopedTools failed (may need active connection):', scopedErr);
+    }
+
+    // Fallback / supplement with listAvailableTools (no filter required).
+    let availableTools: unknown[] = [];
+    if (scopedTools.length === 0) {
+      try {
+        const res = await scalekit.tools.listAvailableTools(identifier);
+        availableTools = (res as { tools?: unknown[] }).tools ?? [];
+        source = source === 'none' ? 'listAvailableTools' : `${source}+listAvailableTools`;
+      } catch (availErr) {
+        console.warn('[debug/tools] listAvailableTools failed:', availErr);
+      }
+    }
+
+    const tools = scopedTools.length > 0 ? scopedTools : availableTools;
+
+    // Tool definitions are often wrapped:
+    // ScopedTool { tool: Tool, identifier, connectedAccountId }
+    // Tool { id, provider, definition: {name, description, ...} (Struct), metadata, ... }
+    const normalized = tools.map((entry: unknown) => {
+      const scoped = entry as { tool?: Record<string, unknown>; identifier?: string; connectedAccountId?: string };
+      const t = (scoped.tool ?? entry) as Record<string, unknown>;
+      const def = (t.definition ?? {}) as Record<string, unknown>;
+
+      // Common places the callable tool name lives
+      const name =
+        (t.name as string) ||
+        (t.toolName as string) ||
+        (def.name as string) ||
+        (def.function as Record<string, unknown>)?.name as string ||
+        'unknown-tool';
+
+      const description =
+        (t.description as string) ||
+        (def.description as string) ||
+        ((def.function as Record<string, unknown>)?.description as string) ||
+        '';
+
+      return {
+        name,
+        description,
+        provider: (t.provider as string) || '',
+        connectedAccountId: scoped.connectedAccountId || '',
+        // Convenience value you can copy into Vapi Function tool name
+        suggestedVapiToolName: name,
+      };
+    });
+
     return NextResponse.json({
       identifier,
-      count: tools.length,
-      tools: tools.map((t: any) => ({
-        name: t.name || t.toolName,
-        description: t.description,
-        // inputSchema: t.inputSchema or similar if present
-      })),
-      raw: tools  // full for debugging
+      source,
+      count: normalized.length,
+      tools: normalized,
+      // Always include raw so you can see the exact structure from Scalekit
+      raw: tools,
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
     console.error('List tools error:', e);
-    return NextResponse.json({ 
-      error: e.message || String(e),
-      identifier: process.env.TEST_IDENTIFIER 
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: message,
+        identifier,
+        hint: 'Set SCALEKIT_* env vars. Make sure TEST_IDENTIFIER matches an ACTIVE connection in the Scalekit AgentKit dashboard. Visit /api/debug/tools after starting the server.',
+      },
+      { status: 500 }
+    );
   }
 }

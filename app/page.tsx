@@ -24,20 +24,22 @@ export default function VapiScalekitDemo() {
       setTranscript((prev) => [...prev, 'Call ended.']);
     });
 
-    vapi.on('error', (e: any) => {
+    vapi.on('error', (e: unknown) => {
       console.error('Vapi error:', e);
       setIsConnecting(false);
       setIsCallActive(false);
-      const msg = e?.message || e?.error || 'Connection failed (check console and Vapi logs)';
+      const errObj = e as { message?: string; error?: string } | null;
+      const msg = errObj?.message || errObj?.error || 'Connection failed (check console and Vapi logs)';
       setTranscript((prev) => [...prev, `❌ Error: ${msg}`]);
     });
 
-    vapi.on('message', (msg: any) => {
-      if (msg.type === 'transcript') {
-        setTranscript((prev) => [...prev, `${msg.role}: ${msg.transcript}`]);
+    vapi.on('message', (msg: unknown) => {
+      const m = msg as { type?: string; role?: string; transcript?: string; functionCall?: { name?: string } } | null;
+      if (m?.type === 'transcript') {
+        setTranscript((prev) => [...prev, `${m.role}: ${m.transcript}`]);
       }
-      if (msg.type === 'function-call') {
-        setTranscript((prev) => [...prev, `→ Tool invoked: ${msg.functionCall?.name}`]);
+      if (m?.type === 'function-call') {
+        setTranscript((prev) => [...prev, `→ Tool invoked: ${m.functionCall?.name}`]);
       }
     });
 
