@@ -4,6 +4,8 @@ A focused, production-oriented prototype showing how to combine **Vapi** (voice 
 
 **Goal of this project**: Let a voice assistant speak naturally and then securely perform real actions (e.g. list Google Calendar events) on behalf of an authenticated user — without ever exposing raw OAuth tokens to the LLM or the voice platform.
 
+Scalekit provides auth and actions on behalf of users, with 500+ connectors and 20,000+ tools.
+
 > **Demo recording**  
 > [Watch the complete flow end-to-end](https://screen.studio/share/tFpYlmgB) — from starting the voice call in the browser, through Vapi tool invocation, the webhook bridge, authenticated Scalekit execution on Google Calendar, and the assistant speaking the results aloud.
 
